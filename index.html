@@ -3420,7 +3420,7 @@
                 toggleRatingBtn.style.display = 'none';
             }
 
-            // 初始化selectedFolders：如果是空的，默认选中所有文件夹
+            // 初始化selectedFolders：默认显示所有文件夹
             if (selectedFolders.length === 0 && folders.length > 0) {
                 selectedFolders = folders.map((_, idx) => idx);
             }
@@ -3428,12 +3428,6 @@
             folders.forEach((folder, index) => {
                 const item = document.createElement('div');
                 item.className = 'folder-list-item';
-                const isSelected = selectedFolders.includes(index);
-
-                // 如果未选中，添加disabled类
-                if (!isSelected && folders.length > 1) {
-                    item.classList.add('disabled');
-                }
 
                 // 单一评分模式下显示星标按钮
                 let starButton = '';
@@ -3453,17 +3447,11 @@
                     folderBadge = `<span class="folder-badge">📁</span>`;
                 }
 
-                // 多文件夹模式下显示checkbox
-                let checkboxHtml = '';
-                if (folders.length > 1) {
-                    checkboxHtml = `<input type="checkbox" class="folder-checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFolderSelection(${index}, this.checked)" onclick="event.stopPropagation()">`;
-                }
-
                 item.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            ${checkboxHtml}
                             <div class="folder-order">${index + 1}</div>
+                            <div style="font-size: 0.85rem; opacity: 0.5; cursor: grab; user-select: none;" title="拖拽调整顺序">⋮⋮</div>
                         </div>
                         <button class="folder-remove-btn" onclick="event.stopPropagation(); removeFolder(${index})" style="padding: 4px 10px; font-size: 0.75rem;">✕</button>
                     </div>
@@ -5603,18 +5591,20 @@
             // 二级：Goodcase（仅出现一次，不分页）
             if (groupedGoodComments.length > 0) {
                 reportHTML += `
-                    <div class="report-section">
+                    <div class="report-section" id="goodcaseSection">
                         <h2 style="color: #7E9D7E; margin: 0 0 48px 0; font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; border-bottom: 1px solid rgba(168, 191, 168, 0.2); padding-bottom: 16px;">
                             <span style="font-size: 1.5rem; margin-right: 12px;">✨</span>
                             <span contenteditable="true">Goodcase</span>
                             <span style="margin: 0 16px; opacity: 0.3; font-size: 1.25rem;">·</span>
                             <span contenteditable="true" style="font-size: 1.125rem; color: #9B8FA5; font-weight: 500;">喜欢的评价</span>
-                        </h2>`;
+                        </h2>
+                        <div class="report-groups-container" id="goodcaseGroups">`;
 
-                // 三级：按评论分组（重复最多的靠前）- 文本标签只出现一次
+                // 三级：按评论分组（重复最多的靠前）- 文本标签只出现一次，可拖拽排序
                 groupedGoodComments.forEach((group, index) => {
                     reportHTML += `
-                        <div style="margin-bottom: 64px; page-break-inside: avoid;">
+                        <div class="draggable-report-group" draggable="true" data-group-index="${index}" style="margin-bottom: 64px; page-break-inside: avoid; position: relative;">
+                            <div class="drag-handle" style="position: absolute; left: -32px; top: 8px; cursor: grab; font-size: 1.25rem; opacity: 0.3; user-select: none;" title="拖拽排序">⋮⋮</div>
                             <div style="margin-bottom: 32px;">
                                 <h3 style="font-weight: 400; color: #4A4550; margin: 0 0 8px 0; font-size: 1.25rem; line-height: 1.6; letter-spacing: -0.01em;">
                                     "<span contenteditable="true">${group.representative}</span>"
@@ -5627,24 +5617,37 @@
                         </div>`;
                 });
 
-                reportHTML += `</div>`;
+                reportHTML += `
+                        </div>
+
+                        <!-- Goodcase 自定义图片区域容器 -->
+                        <div id="goodcaseCustomSections"></div>
+
+                        <!-- Goodcase 新增图片按钮 -->
+                        <button class="add-image-section-btn" onclick="showImageLayoutConfig('goodcase')" style="margin-top: 32px;">
+                            <span style="font-size: 1.5rem;">➕</span>
+                            <span>新增图片区域</span>
+                        </button>
+                    </div>`;
             }
 
             // 二级：Badcase（仅出现一次）
             if (groupedBadComments.length > 0) {
                 reportHTML += `
-                    <div class="report-section" style="page-break-before: always;">
+                    <div class="report-section" id="badcaseSection" style="page-break-before: always;">
                         <h2 style="color: #B8899B; margin: 0 0 48px 0; font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; border-bottom: 1px solid rgba(212, 165, 181, 0.2); padding-bottom: 16px;">
                             <span style="font-size: 1.5rem; margin-right: 12px;">⚠️</span>
                             <span contenteditable="true">Badcase</span>
                             <span style="margin: 0 16px; opacity: 0.3; font-size: 1.25rem;">·</span>
                             <span contenteditable="true" style="font-size: 1.125rem; color: #9B8FA5; font-weight: 500;">需要改进的评价</span>
-                        </h2>`;
+                        </h2>
+                        <div class="report-groups-container" id="badcaseGroups">`;
 
-                // 三级：按评论分组（重复最多的靠前）- 文本标签只出现一次
+                // 三级：按评论分组（重复最多的靠前）- 文本标签只出现一次，可拖拽排序
                 groupedBadComments.forEach((group, index) => {
                     reportHTML += `
-                        <div style="margin-bottom: 64px; page-break-inside: avoid;">
+                        <div class="draggable-report-group" draggable="true" data-group-index="${index}" style="margin-bottom: 64px; page-break-inside: avoid; position: relative;">
+                            <div class="drag-handle" style="position: absolute; left: -32px; top: 8px; cursor: grab; font-size: 1.25rem; opacity: 0.3; user-select: none;" title="拖拽排序">⋮⋮</div>
                             <div style="margin-bottom: 32px;">
                                 <h3 style="font-weight: 400; color: #4A4550; margin: 0 0 8px 0; font-size: 1.25rem; line-height: 1.6; letter-spacing: -0.01em;">
                                     "<span contenteditable="true">${group.representative}</span>"
@@ -5657,7 +5660,18 @@
                         </div>`;
                 });
 
-                reportHTML += `</div>`;
+                reportHTML += `
+                        </div>
+
+                        <!-- Badcase 自定义图片区域容器 -->
+                        <div id="badcaseCustomSections"></div>
+
+                        <!-- Badcase 新增图片按钮 -->
+                        <button class="add-image-section-btn" onclick="showImageLayoutConfig('badcase')" style="margin-top: 32px;">
+                            <span style="font-size: 1.5rem;">➕</span>
+                            <span>新增图片区域</span>
+                        </button>
+                    </div>`;
             }
 
             // 作者签名区域
@@ -5683,7 +5697,7 @@
                     </div>
                 </div>
 
-                <!-- 新增图片配置界面 -->
+                <!-- 新增图片配置界面（全局共享） -->
                 <div class="image-layout-config" id="imageLayoutConfig">
                     <div class="config-row">
                         <span class="config-label">每行图片数：</span>
@@ -5700,15 +5714,6 @@
                         <button class="config-btn config-btn-confirm" onclick="confirmAddImageSection()">确认添加</button>
                     </div>
                 </div>
-
-                <!-- 自定义图片区域容器 -->
-                <div id="customImageSections"></div>
-
-                <!-- 新增图片按钮 -->
-                <button class="add-image-section-btn" onclick="showImageLayoutConfig()">
-                    <span style="font-size: 1.5rem;">➕</span>
-                    <span>新增图片区域</span>
-                </button>
             `;
 
             container.innerHTML = reportHTML;
@@ -5728,8 +5733,73 @@
                 });
             }
 
+            // 初始化拖拽排序功能
+            initializeReportGroupDragSort();
+
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
+        }
+
+        // 初始化报告分组的拖拽排序
+        function initializeReportGroupDragSort() {
+            const containers = ['goodcaseGroups', 'badcaseGroups'];
+
+            containers.forEach(containerId => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                const draggableGroups = container.querySelectorAll('.draggable-report-group');
+                let draggedElement = null;
+
+                draggableGroups.forEach(group => {
+                    group.addEventListener('dragstart', function(e) {
+                        draggedElement = this;
+                        this.style.opacity = '0.4';
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+
+                    group.addEventListener('dragend', function(e) {
+                        this.style.opacity = '1';
+                        draggedElement = null;
+                    });
+
+                    group.addEventListener('dragover', function(e) {
+                        if (e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        e.dataTransfer.dropEffect = 'move';
+
+                        if (draggedElement && draggedElement !== this) {
+                            const rect = this.getBoundingClientRect();
+                            const midpoint = rect.top + rect.height / 2;
+                            if (e.clientY < midpoint) {
+                                container.insertBefore(draggedElement, this);
+                            } else {
+                                container.insertBefore(draggedElement, this.nextSibling);
+                            }
+                        }
+                        return false;
+                    });
+
+                    group.addEventListener('dragenter', function(e) {
+                        if (draggedElement && draggedElement !== this) {
+                            this.style.borderTop = '2px solid #A8BFA8';
+                        }
+                    });
+
+                    group.addEventListener('dragleave', function(e) {
+                        this.style.borderTop = '';
+                    });
+
+                    group.addEventListener('drop', function(e) {
+                        if (e.stopPropagation) {
+                            e.stopPropagation();
+                        }
+                        this.style.borderTop = '';
+                        return false;
+                    });
+                });
+            });
         }
 
         // 渲染报告中的图片列表
@@ -6005,7 +6075,11 @@
         }
 
         // 显示新增图片配置界面
-        function showImageLayoutConfig() {
+        // 当前正在配置的section（goodcase 或 badcase）
+        let currentConfigSection = 'goodcase';
+
+        function showImageLayoutConfig(sectionType = 'goodcase') {
+            currentConfigSection = sectionType;
             const config = document.getElementById('imageLayoutConfig');
             config.classList.add('active');
             config.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -6032,8 +6106,15 @@
                 return;
             }
 
-            const container = document.getElementById('customImageSections');
-            const sectionId = `custom-section-${Date.now()}`;
+            // 根据当前section确定容器
+            const containerId = currentConfigSection === 'goodcase' ? 'goodcaseCustomSections' : 'badcaseCustomSections';
+            const container = document.getElementById(containerId);
+            if (!container) {
+                alert('未找到自定义图片容器');
+                return;
+            }
+
+            const sectionId = `custom-section-${currentConfigSection}-${Date.now()}`;
 
             // 创建自定义图片区域
             const section = document.createElement('div');

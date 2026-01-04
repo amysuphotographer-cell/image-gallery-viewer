@@ -210,6 +210,21 @@
             transform: translateY(0);
         }
 
+        /* SVG图标样式 */
+        .folder-icon {
+            display: inline-block;
+            width: 1.1em;
+            height: 1em;
+            vertical-align: -0.125em;
+            margin-right: 6px;
+        }
+
+        .folder-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+        }
+
         input[type="number"] {
             background: var(--bg-card);
             border: 2px solid var(--border-color);
@@ -616,9 +631,17 @@
         }
 
         .folder-badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
             margin-right: 6px;
             font-size: 1rem;
+            color: var(--color-blue);
+        }
+
+        .folder-badge svg {
+            width: 1em;
+            height: 1em;
+            fill: currentColor;
         }
 
         .toggle-rating-btn {
@@ -3444,7 +3467,7 @@
                 // 多维评分模式下显示文件夹标记
                 let folderBadge = '';
                 if (ratingMode === 'multi' && folders.length > 1) {
-                    folderBadge = `<span class="folder-badge">📁</span>`;
+                    folderBadge = `<span class="folder-badge"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 1em; height: 1em; vertical-align: -0.125em; fill: currentColor;"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></span>`;
                 }
 
                 item.innerHTML = `

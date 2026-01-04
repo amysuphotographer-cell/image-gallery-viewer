@@ -2543,7 +2543,7 @@
     <div class="compare-modal" id="compareModal">
         <div class="compare-header">
             <div class="compare-title">图片对比</div>
-            <div class="compare-mode-indicator sync-mode" id="compareModeIndicator">
+            <div class="compare-mode-indicator sync-mode" id="compareModeIndicator" onclick="toggleCompareZoomMode()" style="cursor: pointer;" title="点击切换缩放模式，或按住Ctrl/Cmd键临时单张缩放">
                 <span class="compare-mode-icon">🔗</span>
                 <span id="compareModeText">同步缩放模式</span>
             </div>
@@ -2793,6 +2793,8 @@
         let originalCompareImages = null; // 保存原始对比图片（用于Q键预览）
         let originalFoldersOrder = null; // 保存原始文件夹顺序（用于Q键预览）
         let isQKeyPressed = false; // 标记Q键是否被按下
+        let isCtrlCmdPressed = false; // 标记Ctrl/Cmd键是否被按下
+        let manualIndividualMode = false; // 标记是否手动切换到独立模式
 
         // RAW 文件扩展名列表
         const RAW_EXTENSIONS = [
@@ -4587,50 +4589,33 @@
                 // 添加拖拽事件
                 setupCompareDrag(wrapper, imageKey);
 
-                // 添加悬停事件监听
+                // 添加悬停事件监听（仅用于独立模式下的聚焦高亮）
                 wrapper.addEventListener('mouseenter', () => {
-                    // 清除之前的计时器
-                    if (compareHoverTimer) {
-                        clearTimeout(compareHoverTimer);
-                    }
-
-                    // 设置2秒后切换到独立模式
-                    compareHoverTimer = setTimeout(() => {
-                        compareZoomMode = 'individual';
+                    // 只有在独立模式下才设置聚焦图片
+                    if (compareZoomMode === 'individual') {
                         compareFocusedImage = imageKey;
-                        updateCompareModeIndicator();
-
                         // 添加聚焦样式
                         document.querySelectorAll('.compare-image-wrapper').forEach(w => {
                             w.classList.remove('focused');
                         });
                         wrapper.classList.add('focused');
-                    }, 2000);
+                    }
                 });
 
                 wrapper.addEventListener('mouseleave', () => {
-                    // 清除计时器
-                    if (compareHoverTimer) {
-                        clearTimeout(compareHoverTimer);
-                        compareHoverTimer = null;
-                    }
-
-                    // 如果是当前聚焦的图片，延迟切换回同步模式
-                    if (compareFocusedImage === imageKey) {
+                    // 独立模式下，如果是当前聚焦的图片且没有按住Ctrl/Cmd，清除聚焦
+                    if (compareZoomMode === 'individual' && compareFocusedImage === imageKey && !isCtrlCmdPressed) {
                         setTimeout(() => {
                             // 检查鼠标是否还在其他图片上
                             const hoveredWrapper = document.querySelector('.compare-image-wrapper:hover');
-                            if (!hoveredWrapper) {
-                                compareZoomMode = 'sync';
+                            if (!hoveredWrapper && !isCtrlCmdPressed) {
                                 compareFocusedImage = null;
-                                updateCompareModeIndicator();
-
                                 // 移除所有聚焦样式
                                 document.querySelectorAll('.compare-image-wrapper').forEach(w => {
                                     w.classList.remove('focused');
                                 });
                             }
-                        }, 300);
+                        }, 100);
                     }
                 });
 
@@ -4751,6 +4736,8 @@
             // 重置模式
             compareZoomMode = 'sync';
             compareFocusedImage = null;
+            manualIndividualMode = false;
+            isCtrlCmdPressed = false;
 
             // 重置Q键相关状态
             isQKeyPressed = false;
@@ -4824,13 +4811,36 @@
 
             if (compareZoomMode === 'sync') {
                 indicator.className = 'compare-mode-indicator sync-mode';
+                indicator.style.cursor = 'pointer';
                 modeIcon.textContent = '🔗';
                 modeText.textContent = '同步缩放模式';
             } else {
                 indicator.className = 'compare-mode-indicator individual-mode';
+                indicator.style.cursor = 'pointer';
                 modeIcon.textContent = '🎯';
                 modeText.textContent = '独立缩放模式';
             }
+        }
+
+        // 切换对比缩放模式
+        function toggleCompareZoomMode() {
+            if (compareZoomMode === 'sync') {
+                compareZoomMode = 'individual';
+                manualIndividualMode = true;
+                // 移除所有聚焦样式
+                document.querySelectorAll('.compare-image-wrapper').forEach(w => {
+                    w.classList.remove('focused');
+                });
+            } else {
+                compareZoomMode = 'sync';
+                manualIndividualMode = false;
+                compareFocusedImage = null;
+                // 移除所有聚焦样式
+                document.querySelectorAll('.compare-image-wrapper').forEach(w => {
+                    w.classList.remove('focused');
+                });
+            }
+            updateCompareModeIndicator();
         }
 
         // 更新对比图片变换
@@ -6279,9 +6289,18 @@ ${currentFolderName}/
                 }
                 return;
             }
+
+            // Ctrl/Cmd键：在对比模式下临时切换到独立缩放
+            if ((e.ctrlKey || e.metaKey) && !isCtrlCmdPressed) {
+                isCtrlCmdPressed = true;
+                if (isCompareModalOpen && compareZoomMode === 'sync' && !manualIndividualMode) {
+                    compareZoomMode = 'individual';
+                    updateCompareModeIndicator();
+                }
+            }
         });
 
-        // 监听键盘松开事件（用于Q键恢复原始顺序）
+        // 监听键盘松开事件（用于Q键恢复原始顺序和Ctrl/Cmd键恢复同步模式）
         document.addEventListener('keyup', (e) => {
             // Q键松开：恢复原始顺序
             if (e.key === 'q' || e.key === 'Q') {
@@ -6297,6 +6316,24 @@ ${currentFolderName}/
                         // 恢复文件夹顺序
                         restoreOriginalFoldersOrder();
                     }
+                }
+                return;
+            }
+
+            // Ctrl/Cmd键松开：恢复同步缩放模式
+            if ((e.key === 'Control' || e.key === 'Meta') && isCtrlCmdPressed) {
+                isCtrlCmdPressed = false;
+                const compareModal = document.getElementById('compareModal');
+                const isCompareModalOpen = compareModal && compareModal.classList.contains('active');
+
+                if (isCompareModalOpen && !manualIndividualMode) {
+                    compareZoomMode = 'sync';
+                    compareFocusedImage = null;
+                    updateCompareModeIndicator();
+                    // 移除所有聚焦样式
+                    document.querySelectorAll('.compare-image-wrapper').forEach(w => {
+                        w.classList.remove('focused');
+                    });
                 }
                 return;
             }

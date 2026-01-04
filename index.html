@@ -524,14 +524,13 @@
         .folder-list-item {
             display: flex;
             flex-direction: column;
-            padding: 10px;
+            padding: 8px;
             background: var(--bg-card);
             border: 2px solid var(--border-color);
             border-radius: 12px;
             transition: all 0.3s ease;
             cursor: grab;
             position: relative;
-            min-height: 90px;
         }
 
         .folder-list-item:hover {
@@ -3444,8 +3443,17 @@
             }
 
             // 初始化selectedFolders：默认显示所有文件夹
-            if (selectedFolders.length === 0 && folders.length > 0) {
-                selectedFolders = folders.map((_, idx) => idx);
+            // 检查是否有新添加的文件夹索引不在selectedFolders中
+            if (folders.length > 0) {
+                const allIndices = folders.map((_, idx) => idx);
+                // 添加不在selectedFolders中的新索引
+                allIndices.forEach(idx => {
+                    if (!selectedFolders.includes(idx)) {
+                        selectedFolders.push(idx);
+                    }
+                });
+                // 移除不再存在的索引（文件夹被删除的情况）
+                selectedFolders = selectedFolders.filter(idx => idx < folders.length);
             }
 
             folders.forEach((folder, index) => {
